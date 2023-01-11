@@ -38,6 +38,7 @@ class TestIdentity:
             "username": "karlheinzschinkenwurst",
             "exp": str(then),
         }
+        mock_client.post.return_value.raise_for_status = mock.Mock()
 
         # cold cache
 
