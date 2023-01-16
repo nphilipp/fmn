@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Column, ForeignKey, Integer, String, UnicodeText
 from sqlalchemy.orm import relationship
@@ -23,7 +23,7 @@ class Destination(Base):
     protocol = Column(String(length=255), nullable=False)
     address = Column(UnicodeText, nullable=False)
 
-    def generate(self, message: "Message"):
+    def generate(self, message: "Message") -> dict[str, Any]:
         if self.protocol == "email":
             return {
                 "headers": {

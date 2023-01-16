@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -39,12 +40,12 @@ async def get_user(username, db_session: AsyncSession = Depends(gen_db_session))
     return user
 
 
-@router.get("/{username}/info", tags=["users"])
+@router.get("/{username}/info", response_model=dict[str, Any], tags=["users"])
 async def get_user_info(username, fasjson_proxy: FASJSONAsyncProxy = Depends(get_fasjson_proxy)):
     return await fasjson_proxy.get_user(username=username)
 
 
-@router.get("/{username}/groups", tags=["users"])
+@router.get("/{username}/groups", response_model=list[str], tags=["users"])
 async def get_user_groups(username, fasjson_proxy: FASJSONAsyncProxy = Depends(get_fasjson_proxy)):
     return [g["groupname"] for g in await fasjson_proxy.get_user_groups(username=username)]
 

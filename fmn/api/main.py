@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.errors import ServerErrorMiddleware
 from starlette.requests import Request as StarletteRequest
-from starlette.types import ASGIApp
 
 from ..cache import configure_cache
 from ..core.config import get_settings
@@ -36,7 +35,7 @@ app.include_router(handlers.misc.router, prefix=PREFIX)
 
 async def global_execution_handler(
     request: StarletteRequest, exc: Exception
-) -> ASGIApp:  # pragma: no cover todo
+) -> JSONResponse:  # pragma: no cover todo
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content="Unknown Error",
@@ -44,7 +43,7 @@ async def global_execution_handler(
 
 
 @app.on_event("startup")
-def add_middlewares():
+def add_middlewares() -> None:
     app.add_middleware(
         ServerErrorMiddleware,
         handler=global_execution_handler,
@@ -59,10 +58,10 @@ def add_middlewares():
 
 
 @app.on_event("startup")
-async def init_model():
+async def init_model() -> None:
     await init_async_model()
 
 
 @app.on_event("startup")
-def configure_cache_on_startup():
+def configure_cache_on_startup() -> None:
     configure_cache()

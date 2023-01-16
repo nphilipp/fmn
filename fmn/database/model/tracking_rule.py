@@ -9,7 +9,9 @@ from ..main import Base
 if TYPE_CHECKING:
     from fedora_messaging.message import Message
 
+    from ...rules.cache import CacheDict
     from ...rules.requester import Requester
+    from ...rules.tracking_rules import TrackingRule as RulesTrackingRule
 
 
 class TrackingRule(Base):
@@ -24,7 +26,7 @@ class TrackingRule(Base):
     name = Column(String(length=255), nullable=False)
     params = Column(JSON)
 
-    def get_implementation(self, requester: "Requester"):
+    def get_implementation(self, requester: "Requester") -> "RulesTrackingRule":
         eps = entry_points(group="fmn.tracking_rules", name=self.name)
         if len(eps) != 1:
             raise ValueError(f"Unknown tracking rule: {self.name}")
@@ -32,10 +34,10 @@ class TrackingRule(Base):
         owner = self.rule.user.name
         return impl_class(requester, self.params, owner)
 
-    async def matches(self, message: "Message", requester: "Requester"):
+    async def matches(self, message: "Message", requester: "Requester") -> bool:
         impl = self.get_implementation(requester)
         return await impl.matches(message)
 
-    async def prime_cache(self, cache, requester: "Requester"):
+    async def prime_cache(self, cache: "CacheDict", requester: "Requester") -> None:
         impl = self.get_implementation(requester)
         return await impl.prime_cache(cache)

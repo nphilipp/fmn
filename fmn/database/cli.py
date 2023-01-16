@@ -1,3 +1,5 @@
+from typing import Sequence
+
 import click
 
 from ..core.config import SQLAlchemyModel, get_settings
@@ -15,19 +17,19 @@ def verify_db_url_not_default():
 
 
 @click.group()
-def database():
+def database() -> None:
     """Work with the database used by FMN."""
     verify_db_url_not_default()
 
 
 @database.command()
-def setup():
+def setup() -> None:
     """Set up FMN in the configured database."""
     setup_db_schema()
 
 
 @database.group()
-def migration():
+def migration() -> None:
     """Manage database migrations for FMN."""
     pass
 
@@ -39,26 +41,26 @@ def migration():
     help="Autogenerate migration script skeleton (needs to be reviewed/edited).",
 )
 @click.argument("comment", nargs=-1, required=True)
-def migration_create(autogenerate, comment):
+def migration_create(autogenerate: bool, comment: Sequence[str]) -> None:
     """Create a new database schema migration."""
     alembic_migration.create(comment=" ".join(comment), autogenerate=autogenerate)
 
 
 @migration.command("db-version")
-def migration_db_version():
+def migration_db_version() -> None:
     """Show the current version of the database schema."""
     alembic_migration.db_version()
 
 
 @migration.command("upgrade")
 @click.argument("version", default="head")
-def migration_upgrade(version):
+def migration_upgrade(version: str) -> None:
     """Upgrade the database schema."""
     alembic_migration.upgrade(version)
 
 
 @migration.command("downgrade")
 @click.argument("version", default="-1")
-def migration_downgrade(version):
+def migration_downgrade(version: str) -> None:
     """Downgrade the database schema."""
     alembic_migration.downgrade(version)

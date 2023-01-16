@@ -14,7 +14,7 @@ branch_labels = None
 depends_on = None
 
 
-def upgrade():
+def upgrade() -> None:
     op.add_column(
         "rules",
         sa.Column("disabled", sa.Boolean(), server_default=sa.text("FALSE"), nullable=False),
@@ -22,6 +22,6 @@ def upgrade():
     op.create_index(op.f("rules_disabled_index"), "rules", ["disabled"], unique=False)
 
 
-def downgrade():
+def downgrade() -> None:
     op.drop_index(op.f("rules_disabled_index"), table_name="rules")
     op.drop_column("rules", "disabled")

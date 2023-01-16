@@ -10,6 +10,7 @@ from .generation_rule import GenerationRule
 if TYPE_CHECKING:
     from fedora_messaging.message import Message
 
+    from ...rules.filter import Filter as RulesFilter
     from ...rules.requester import Requester
 
 
@@ -26,7 +27,7 @@ class Filter(Base):
     name = Column(String(length=255), nullable=False)
     params = Column(JSON)
 
-    def get_implementation(self, requester: "Requester"):
+    def get_implementation(self, requester: "Requester") -> "RulesFilter":
         eps = entry_points(group="fmn.filters", name=self.name)
         if len(eps) != 1:
             raise ValueError(f"Unknown filter: {self.name}")
@@ -34,6 +35,6 @@ class Filter(Base):
         username = self.generation_rule.rule.user.name
         return impl_class(requester=requester, params=self.params, username=username)
 
-    def matches(self, message: "Message", requester: "Requester"):
+    def matches(self, message: "Message", requester: "Requester") -> bool:
         impl = self.get_implementation(requester)
         return impl.matches(message)

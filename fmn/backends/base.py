@@ -36,7 +36,7 @@ class APIClient(ABC):
     payload_field: str | None
     """The payload field in a paginated response."""
 
-    def __init__(self, base_url: str | None = None, **kwargs):
+    def __init__(self, base_url: str | None = None, **kwargs) -> None:
         self.base_url = base_url
 
         kwargs.setdefault("timeout", None)

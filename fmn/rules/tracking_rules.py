@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ..backends import PagureRole
 from ..core.constants import ArtifactType
@@ -7,6 +7,8 @@ from .requester import Requester
 
 if TYPE_CHECKING:
     from fedora_messaging.message import Message
+
+    from .cache import CacheDict
 
 
 log = logging.getLogger(__name__)
@@ -16,26 +18,26 @@ class TrackingRule:
     # This should be the name of the Tracking rule in the Database
     name: str | None = None
 
-    def __init__(self, requester: Requester, params, owner):
+    def __init__(self, requester: Requester, params: dict[str, Any], owner: str) -> None:
         self._requester = requester
         self._params = params
         self._owner = owner
 
-    async def matches(self, message: "Message"):
+    async def matches(self, message: "Message") -> bool:
         raise NotImplementedError  # pragma: no cover
 
-    async def prime_cache(self, cache):
+    async def prime_cache(self, cache: "CacheDict") -> None:
         raise NotImplementedError  # pragma: no cover
 
 
 class ArtifactsOwned(TrackingRule):
     name = "artifacts-owned"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.usernames = set(self._params)
 
-    async def matches(self, message):
+    async def matches(self, message: "Message") -> bool:
         for artifact_type in ArtifactType:
             for artifact in getattr(message, artifact_type.name):
                 owners = await self._requester.distgit.get_project_users(
@@ -57,11 +59,11 @@ class ArtifactsOwned(TrackingRule):
 class ArtifactsGroupOwned(TrackingRule):
     name = "artifacts-group-owned"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.groups = set(self._params)
 
-    async def matches(self, message):
+    async def matches(self, message: "Message") -> bool:
         for artifact_type in ArtifactType:
             for artifact in getattr(message, artifact_type.name):
                 owners = await self._requester.distgit.get_project_groups(
@@ -89,7 +91,7 @@ class ArtifactsGroupOwned(TrackingRule):
 class ArtifactsFollowed(TrackingRule):
     name = "artifacts-followed"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.followed = {
             atype.name: {p["name"] for p in self._params if p["type"] == atype.value}
@@ -97,7 +99,7 @@ class ArtifactsFollowed(TrackingRule):
         }
         # → packages: {"pkg1", "pkg2", "pkg3"}
 
-    async def matches(self, message):
+    async def matches(self, message: "Message") -> bool:
         for msg_attr, followed in self.followed.items():
             if not followed:
                 continue
@@ -105,7 +107,7 @@ class ArtifactsFollowed(TrackingRule):
                 return True
         return False
 
-    async def prime_cache(self, cache):
+    async def prime_cache(self, cache: "CacheDict") -> None:
         for msg_attr, followed in self.followed.items():
             if not followed:
                 continue
@@ -115,25 +117,25 @@ class ArtifactsFollowed(TrackingRule):
 class RelatedEvents(TrackingRule):
     name = "related-events"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    async def matches(self, message):
+    async def matches(self, message: "Message") -> bool:
         return self._owner in message.usernames
 
-    async def prime_cache(self, cache):
+    async def prime_cache(self, cache: "CacheDict") -> None:
         cache.usernames.add(self._owner)
 
 
 class UsersFollowed(TrackingRule):
     name = "users-followed"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.followed = set(self._params)
 
-    async def matches(self, message):
+    async def matches(self, message: "Message") -> bool:
         return message.agent_name in self.followed
 
-    async def prime_cache(self, cache):
+    async def prime_cache(self, cache: "CacheDict") -> None:
         cache.agent_name.update(self.followed)

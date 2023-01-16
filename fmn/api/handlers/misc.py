@@ -127,12 +127,12 @@ async def preview_rule(
     return notifs
 
 
-@router.get("/healthz/live", tags=["healthz"])
+@router.get("/healthz/live", response_model=dict[str, str], tags=["healthz"])
 async def liveness_check():
     return {"detail": "OK"}
 
 
-@router.get("/healthz/ready", tags=["healthz"])
+@router.get("/healthz/ready", response_model=dict[str, str], tags=["healthz"])
 async def readiness_check(db_session: AsyncSession = Depends(gen_db_session)):
     try:
         needs_upgrade = await alembic_migration.needs_upgrade(db_session)

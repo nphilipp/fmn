@@ -58,12 +58,12 @@ class FASJSONAsyncProxy(APIClient):
         return [user async for user in self.get_paginated("/search/users/", params=params)]
 
     @cache(ttl=cache_ttl("fasjson"), prefix="v1")
-    async def get_user(self, *, username: str) -> dict:
+    async def get_user(self, *, username: str) -> dict[str, Any]:
         return await self.get_payload(f"/users/{username}/")
 
     @handle_http_error(list)
     @cache(ttl=cache_ttl("fasjson"), prefix="v1")
-    async def get_user_groups(self, *, username: str) -> dict:
+    async def get_user_groups(self, *, username: str) -> dict[str, Any]:
         return await self.get_payload(f"/users/{username}/groups/")
 
     async def invalidate_on_message(self, message: "Message") -> None:

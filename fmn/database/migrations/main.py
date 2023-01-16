@@ -7,6 +7,7 @@ import alembic.config
 import alembic.migration
 import alembic.runtime.environment
 import alembic.script
+from sqlalchemy.ext.asyncio import AsyncConnection
 
 from ...core.config import get_settings
 
@@ -19,7 +20,7 @@ class AlembicMigration:
     """Glue FMN (mainly its settings) and Alembic DB migrations together."""
 
     @cached_property
-    def config(self):
+    def config(self) -> alembic.config.Config:
         config = alembic.config.Config()
         config.set_main_option("script_location", str(HERE.absolute()).replace("%", "%%"))
         config.set_main_option(
@@ -27,7 +28,7 @@ class AlembicMigration:
         )
         return config
 
-    def create(self, comment: str, autogenerate: bool):
+    def create(self, comment: str, autogenerate: bool) -> None:
         alembic.command.revision(config=self.config, message=comment, autogenerate=autogenerate)
 
         if autogenerate:
@@ -54,10 +55,10 @@ class AlembicMigration:
 
         return current_revs
 
-    def db_version(self):
+    def db_version(self) -> None:
         print("\n".join(self._get_current()))
 
-    def upgrade(self, version: str):
+    def upgrade(self, version: str) -> None:
         pre_revs = self._get_current()
         alembic.command.upgrade(self.config, version)
         post_revs = self._get_current()
@@ -66,7 +67,7 @@ class AlembicMigration:
         else:
             print("Upgraded to:", ", ".join(post_revs))
 
-    def downgrade(self, version: str):
+    def downgrade(self, version: str) -> None:
         pre_revs = self._get_current()
         alembic.command.downgrade(self.config, version)
         post_revs = self._get_current()
@@ -75,7 +76,7 @@ class AlembicMigration:
         else:
             print("Downgraded to:", ", ".join(post_revs) if post_revs else "<base>")
 
-    async def needs_upgrade(self, async_connection):
+    async def needs_upgrade(self, async_connection: AsyncConnection) -> bool:
         script = alembic.script.ScriptDirectory.from_config(self.config)
         latest = script.get_current_head()
         context = alembic.migration.MigrationContext.configure(

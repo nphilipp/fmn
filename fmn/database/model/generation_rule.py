@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, AsyncIterator
 
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
@@ -30,7 +30,9 @@ class GenerationRule(Base):
         # collection_class=attribute_mapped_collection("name"),
     )
 
-    async def handle(self, message: "Message", requester: "Requester"):
+    async def handle(
+        self, message: "Message", requester: "Requester"
+    ) -> AsyncIterator[Notification]:
         # It's all sync now but who knows what the future may hold...
         filters = self.filters
         if filters and not all([f.matches(message, requester) for f in filters]):

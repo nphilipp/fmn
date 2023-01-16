@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Any, AsyncIterator, Iterator
 
 from fedora_messaging import message
 
@@ -6,9 +6,10 @@ from ...backends import DatagrepperAsyncProxy
 from ...core.config import get_settings
 from ...database.model import Destination, Filter, GenerationRule, Rule, TrackingRule
 from ...rules.requester import Requester
+from ..api_models import Rule as APIRule
 
 
-def db_rule_from_api_rule(rule, user):
+def db_rule_from_api_rule(rule: APIRule, user: str) -> Rule:
     rule_db = Rule(user=user, name=rule.name, disabled=rule.disabled)
     rule_db.tracking_rule = TrackingRule(
         name=rule.tracking_rule.name, params=rule.tracking_rule.params
@@ -37,8 +38,7 @@ def gen_requester() -> Iterator[Requester]:
     yield requester
 
 
-# TODO: absolutely cache this
-async def get_last_messages(hours):
+async def get_last_messages(hours: int | float) -> AsyncIterator[message.Message]:
     proxy = DatagrepperAsyncProxy(get_settings().services.datagrepper_url)
 
     async for msg_dict in proxy.search(delta=int(hours * 60 * 60), rows_per_page=100):
@@ -46,7 +46,7 @@ async def get_last_messages(hours):
 
 
 # Replace this with fedora_messaging.message.load_message() when it's published.
-def get_message(message_dict):  # pragma: no cover
+def get_message(message_dict: dict[str, Any]) -> message.Message:  # pragma: no cover
     MessageClass = message.get_class(
         message_dict["headers"].get("fedora_messaging_schema", "base.message")
     )

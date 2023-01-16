@@ -1,6 +1,6 @@
 import logging
 from functools import cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, AsyncIterator
 
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, UnicodeText, select
 from sqlalchemy.orm import relationship, selectinload
@@ -14,6 +14,7 @@ from .user import User
 if TYPE_CHECKING:
     from fedora_messaging.message import Message
 
+    from ...rules.notification import Notification
     from ...rules.requester import Requester
 
 
@@ -56,7 +57,9 @@ class Rule(Base):
             selectinload(cls.generation_rules).selectinload(GenerationRule.filters),
         )
 
-    async def handle(self, message: "Message", requester: "Requester"):
+    async def handle(
+        self, message: "Message", requester: "Requester"
+    ) -> AsyncIterator["Notification"]:
         log.debug(f"Rule {self.id} handling message {message.id}")
         if not await self.tracking_rule.matches(message, requester):
             return

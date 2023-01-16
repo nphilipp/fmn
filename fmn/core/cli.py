@@ -17,7 +17,7 @@ from .version import __version__
     help="The configuration file for FMN.",
 )
 @click.version_option(version=__version__, prog_name="FMN")
-def cli(settings_file: str | None):
+def cli(settings_file: str | None) -> None:
     """Fedora Messaging Notifications"""
     if settings_file:
         config.set_settings_file(settings_file)

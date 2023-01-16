@@ -13,18 +13,18 @@ from ..rules.notification import Notification
 log = logging.getLogger(__name__)
 
 
-async def backoff_hdlr(details):
+async def backoff_hdlr(details: dict) -> None:
     log.warning(f"Publishing message failed. Retrying. {traceback.format_tb(sys.exc_info()[2])}")
     self = details["args"][0]
     await self.connect()
 
 
-def giveup_hdlr(details):
+def giveup_hdlr(details: dict) -> None:
     log.error(f"Publishing message failed. Giving up. {traceback.format_tb(sys.exc_info()[2])}")
 
 
 class SendQueue:
-    def __init__(self, config: dict):
+    def __init__(self, config: dict) -> None:
         self.config = config
         self._url = get_url_from_config(config).update_query(
             connection_name="FMN consumer to sender"
@@ -33,7 +33,7 @@ class SendQueue:
         self._channel = None
         self._exchange = None
 
-    async def connect(self):
+    async def connect(self) -> None:
         self._connection = await connect_robust(self._url)
         self._channel = await self._connection.channel()
         self._exchange = await self._channel.get_exchange("amq.direct")
@@ -45,13 +45,13 @@ class SendQueue:
         on_backoff=backoff_hdlr,
         on_giveup=giveup_hdlr,
     )
-    async def send(self, notification: Notification):
+    async def send(self, notification: Notification) -> None:
         body = json.dumps(notification.content)
         await self._exchange.publish(
             Message(body=body.encode("utf-8")),
             routing_key=f"send.{notification.protocol}",
         )
 
-    async def close(self):
+    async def close(self) -> None:
         if self._connection:
             await self._connection.close()

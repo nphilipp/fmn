@@ -1,11 +1,13 @@
 import asyncio
 import logging
 from concurrent.futures import wait
+from typing import TYPE_CHECKING
 
 from aio_pika.exceptions import AMQPConnectionError
 from fedora_messaging import message
 from fedora_messaging.config import conf as fm_config
 from fedora_messaging.exceptions import Nack
+from sqlalchemy.ext.asyncio import AsyncScalarResult
 
 from ..cache import configure_cache
 from ..cache.tracked import TrackedCache
@@ -15,11 +17,14 @@ from ..database.model import Rule
 from ..rules.requester import Requester
 from .send_queue import SendQueue
 
+if TYPE_CHECKING:
+    from ..rules.notification import Notification
+
 log = logging.getLogger(__name__)
 
 
 class Consumer:
-    def __init__(self):
+    def __init__(self) -> None:
         # Load the general config
         if fm_config["consumer_config"].get("settings_file"):
             config.set_settings_file(fm_config["consumer_config"]["settings_file"])
@@ -31,7 +36,7 @@ class Consumer:
         if not self.loop.is_running():
             self.loop.run_until_complete(self._ready)
 
-    async def setup(self):
+    async def setup(self) -> None:
         # Connect to the database
         await init_async_model()
         self.db = async_session_maker()
@@ -40,7 +45,7 @@ class Consumer:
         # Caching and requesting
         configure_cache()
 
-    def __call__(self, message: message.Message):
+    def __call__(self, message: message.Message) -> None:
         log.debug(f"Consuming message {message.id}")
         coro = self.handle_or_rollback(message)
         if self.loop.is_running():
@@ -50,7 +55,7 @@ class Consumer:
         else:
             self.loop.run_until_complete(coro)
 
-    async def handle_or_rollback(self, message: message.Message):
+    async def handle_or_rollback(self, message: message.Message) -> None:
         await self._ready
         try:
             await self.handle(message)
@@ -58,7 +63,7 @@ class Consumer:
             await self.db.rollback()
             raise
 
-    async def handle(self, message: message.Message):
+    async def handle(self, message: message.Message) -> None:
         await self.refresh_cache_if_needed(message)
         if not await self.is_tracked(message):
             log.debug(f"Message {message.id} is not tracked")
@@ -71,7 +76,7 @@ class Consumer:
             async for notification in rule.handle(message, self._requester):
                 await self._send(notification, message)
 
-    async def _send(self, notification, from_msg):
+    async def _send(self, notification: "Notification", from_msg: message.Message) -> None:
         log.debug(f"Generating notification for message {from_msg.id} via {notification.protocol}")
         try:
             await self.send_queue.send(notification)
@@ -81,12 +86,12 @@ class Consumer:
             )
             raise Nack()
 
-    async def _get_rules(self):
+    async def _get_rules(self) -> AsyncScalarResult:
         # TODO: Cache this!
         result = await self.db.execute(Rule.select_related().filter_by(disabled=False))
         return result.scalars()
 
-    async def is_tracked(self, message: message.Message):
+    async def is_tracked(self, message: message.Message) -> bool:
         # This is cache-based and should save us running all the messages through all the rules. The
         # tracked messages will still run though all the rules though, so this could be improved I
         # suppose, maybe by changing the cache datastructure to point each entry in the cache to the
@@ -101,6 +106,6 @@ class Consumer:
             return True
         return False
 
-    async def refresh_cache_if_needed(self, message: message.Message):
+    async def refresh_cache_if_needed(self, message: message.Message) -> None:
         await self._tracked_cache.invalidate_on_message(message)
         await self._requester.invalidate_on_message(message)
